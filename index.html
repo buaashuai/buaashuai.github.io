@@ -3,12 +3,143 @@
     <head>
         <meta charset="UTF-8">
         <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-        <title>A Demo</title>
+        <title>达梦数据库之入门
+</title>
     </head>
     <style type="text/css">
-        body, div{margin:0;padding:0;background-color: #C0FF3E;}
+        body, div{margin:30px;padding:30px;}
     </style>
     <body>
-        <div></div>
+        <h1>达梦数据库之入门</h1>
+        <p>最近接触了达梦数据库管理系统（DM8），DM8是达梦公司在总结DM系列产品研发与应用经验的基础上，坚持开放创新、简洁实用的理念，推出的新一代自研数据库。DM8吸收借鉴当前先进新技术思想与主流数据库产品的优点，融合了分布式、弹性计算与云计算的优势，对灵活性、易用性、可靠性、高安全性等方面进行了大规模改进，多样化架构充分满足不同场景需求，支持超大规模并发事务处理和事务-分析混合型业务处理，动态分配计算资源，实现更精细化的资源利用、更低成本的投入。一个数据库，满足用户多种需求，让用户能更加专注于业务发展。
+首先介绍一下达梦数据库的特点：
+</p>
+<h2>
+    通用性
+</h2>
+<p>
+    DM8兼容多种硬件体系，可运行于X86、X64、SPARC、POWER等硬件体系之上。DM各种平台上的结构和消息通信结构完全一致，使得DM各种组件在不同的硬件平台上具有一致的使用特性。 达梦数据库管理系统产品实现了平台无关性，支持Windows系列、各版本Linux（2.4及2.4以上内核）、Unix、Kylin、AIX、Solaris等各种主流操作系统。达梦数据库的各项管理工具均可在32位/64 位版本操作系统上使用。
+</p>
+<h2>
+    高性能
+</h2>
+<p>
+    它支持列存储、数据压缩、物化视图等面向联机事务分析场景的优化选项；可以通过表级行存储、列存储选项技术，在同一产品中提供对联机事务处理和联机分析处理业务场景的支持。
+<h2>
+    高可用
+</h2>
+<p>
+    可配置数据守护系统(主备)，自动快速故障恢复，具有强大的容灾处理能力。
+</p>
+<h2>
+    跨平台
+</h2>
+<p>
+    跨平台，支持主流软硬件体系（支持windows、Linux、中标麒麟、银河麒麟等操作系统),支持主流标准接口。
+</p>
+<h2>
+    高可扩展
+</h2>
+<p>
+    支持拓展软件包和多种工具，实现海量数据分析处理、数据共享集群(DSC)和无共享数据库集群(MPP)等扩展功能。
+</p>
+
+<h2>数据库设置</h2>
+<h3>创建用户</h3>
+
+create user test identified by wdd
+
+
+<h3>修改用户密码</h3>
+
+alter user SYSDBA identified by SYSDBA
+
+
+<h3>查询当前用户连续登录失败次数和登录失败限制登录的时间（分钟）</h3>
+
+select b.username,a.failed_num,a.failed_attemps,a.lock_time from sysusers a right join all_users b on a.id = b.user_id
+
+
+<h3>锁定用户</h3>
+
+alter user wdd account lock
+
+
+<h3>解锁用户</h3>
+
+alter user wdd account unlock
+
+
+<h3>开启数据库审计功能</h3>
+
+SP_SET_ENABLE_AUDIT(1);
+
+
+<h3>设置数据库 ip 白名单</h3>
+
+alter user wdd allow_ip “61.239.70.23”,”61.239.70.232”;
+
+
+<h3>取消数据库 ip 白名单</h3>
+
+alter user SYSDBA allow_ip null;
+
+
+<h3>设置数据库 ip 黑名单</h3>
+
+alter user wdd NOT_ALLOW_IP “61.239.70.23”,”61.239.70.232”;
+
+
+<h3>取消数据库 ip 黑名单</h3>
+
+alter user SYSDBA not_allow_ip null;
+
+
+<h3>查看所有用户的ip规则</h3>
+
+Select A.allow_addr,A.not_allow_addr,B.USERNAME from SYSUSERS A ,DBA_USERS B WHERE A.ID=B.USER_ID;
+
+
+<h2>基本语法</h2>
+<h3>创建数据表</h3>
+
+CREATE TABLE "SYSDBA"."STUDENT"
+  (
+ "SNO" INT,
+"SNAME" VARCHAR(50) NOT NULL,
+"SEX" CHAR(10) NOT NULL,
+"DEPT" VARCHAR(200) NOT NULL,
+"BRITH" DATE NOT NULL,
+"AGE" INT NOT NULL,
+PRIMARY KEY(SNO),
+CHECK(SEX IN ('男', '女'))
+,CHECK(DEPT IN ('美术系', '自动化系', '人文社科系', '经济管理系', '数学系', '物理系', '飞行器设计系'))
+,CHECK(AGE BETWEEN 1 AND 100)) STORAGE(ON "MAIN", CLUSTERBTR) ;
+
+
+
+<h3>插入数据</h3>
+
+insert into SYSDBA.STUDENT VALUES(1,'小王','女','人文系','2022-05-19','18')
+commit
+
+
+<h3>查看数据</h3>
+
+SELECT * FROM SYSDBA.STUDENT;
+
+
+<h3>修改数据</h3>
+
+UPDATE SYSDBA.STUDENT SET DEPT='电子信息系' WHERE SNAME='小王';
+SELECT * FROM SYSDBA.STUDENT;
+
+
+<h3>删除数据</h3>
+
+DELETE FROM SYSDBA.STUDENT WHERE SNAME='小王';
+
+
+
     </body>
 </html>
