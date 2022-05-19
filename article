@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+        <title>达梦数据库之性能优化
+</title>
+    </head>
+    <style type="text/css">
+        body, div{margin:30px;padding:30px;}
+    </style>
+    <body>
+        <p>达梦数据库管理系统是达梦公司推出的具有完全自主知识产权的高性能数据库管理系统，简称DM。达梦数据库管理系统的最新版本是8.0版本，简称DM8。
+DM8采用全新的体系架构，在保证大型通用的基础上，针对可靠性、高性能、海量数据处理和安全性做了大量的研发和改进工作，极大提升了达梦数据库产品的性能、可靠性、可扩展性，能同时兼顾OLTP和OLAP请求，从根本上提升了DM8产品的品质。
+SQL调优作为数据库性能调优中的最后一个环节，对查询性能产生着直接的影响。在进 行正式的SQL调优前，用户首先要关注下列几点：<br/><br/>
+1.达梦数据库安装时的配置参数是否符合应用场景需求；<br/>
+2. 达梦数据库的INI配置文件中各项参数是否己经处于最优配置；<br/>
+3. 应用系统中数据库设计是否合理。
+</p>
+<h2>
+    优化的基本思路
+</h2>
+<p>
+    正常情况下，我们在遇到数据库性能问题的时候会从以下几个维度去排查锁定问题的根源，从而通过各种手段来进行优化，与达到预期或者较好的效果，一般从下面3个方面分析：<br/><br/>
+
+1、操作系统层面：内存使用率、cpu负载、I/O负载、磁盘读写、网络状态等。<br/>
+2、实例层面：包含数据库架构的优势即缺陷、实例参数的设置。<br/>
+3、SQL层面：慢SQL、执行计划、索引、统计信息、表设计、这段选取等。
+</p>
+<h2>
+    操作系统层面
+</h2>
+<p>
+    <b>1、使用top命令查看cpu使用率</b><br/><br/>
+      top主要查看总体操作系统各方面整体情况，一边快速锁定负载异常，更好去排查，top主要包含①当前系统时间(在这期间没有重启过)②用户登陆情况伞③任务(进程)，系统现在共X进程，其中处于运行中、休眠的、stoped状态的、zombie状态(僵尸)的信息。④cpu、内存、swap状态等。<br/><br/>
+<b>2、使用iostat命令查看磁盘I/O使用情况</b><br/><br/>
+    iostat命令来简单查看磁盘的使用情况，可以每1秒不断刷新最新的磁盘使用情况，方便连续观察，根据硬件找好参考标准判断读写及磁盘I/O。<br/><br/>
+<b>3、使用dstat工具查看磁盘I/O使用情况</b><br/><br/>
+    dstat是一个全能型的系统信息统计工具，可以替代vmstat、iostat、ifstat等。在执行dstat命令时，可以很容易的监控到系统CPU、I/0、网络等相关信息，默认每秒刷新一条信息，并且可以统计输出csv文件等。<br/><br/>
+常用的一些例子：<br/>
+①查看当前内存、I/O、cpu占用最高的进程信息<br/>
+    dstat --top-mem --top-io --top-cpu<br/>
+②将cpu、磁盘、网络信息标准输出至csv中<br/>
+    dstat -cdn --output /tmp/wh.csv<br/>
+③3秒收集一次数据，输出5次后中断。<br/>
+    dstat --noupdate 3 5<br/>
+
+<h2>
+    SQL 优化
+</h2>
+<p>
+  <b>  1. limit分页优化</b><br/><br/>
+当偏移量特别大时，limit效率会非常低。<br/>
+
+SELECT id FROM A LIMIT 1000,10 很快<br/>
+
+SELECT id FROM A LIMIT 90000,10 很慢<br/>
+```
+select id from A order by id limit 90000,10;
+```<br/><br/>
+如果我们结合order by使用。很快，0.04秒就OK。 因为使用了id主键做索引！当然，是否能够使用索引还需要根据业务逻辑来定。<br/><br/>
+<b>2. 利用limit 1 、top 1 取得一行</b><br/><br/>
+有些业务逻辑进行查询操作时(特别是在根据某一字段DESC,取最大一笔).可以使用limit 1 或者 top 1 来终止[数据库索引]继续扫描整个表或索引。<br/>
+```
+SELECT id FROM A LIKE 'abc%' limit 1
+```<br/><br/>
+<b>3. 批量插入优化</b><br/><br/>
+sql语句的优化主要在于对索引的正确使用，而我们在开发中经常犯的错误便是对表进行全盘扫描。<br/>
+```
+INSERT into person(name,age) values('A',24),('B',24),('C',24),
+```<br/><br/>
+<b>4.like语句的优化</b><br/><br/>
+```
+SELECT id FROM A WHERE name like 'abc%'
+```<br/><br/>
+<b>5.where子句使用or的优化</b><br/><br/>
+通常使用 union all 或 union 的方式替换“or”会得到更好的效果。where子句中使用了or关键字,索引将被放弃使用。
+```
+SELECT id FROM A WHERE num = 10 union all SELECT id FROM A WHERE num=20
+```<br/><br/>
+<b>6.where子句中使用 IS NULL 或 IS NOT NULL 的优化</b><br/><br/>
+优化成num上设置默认值0，确保表中num没有null值, IS NULL 的用法在实际业务场景下SQL使用率极高，我们应注意避免全表扫描
+```
+SELECT id FROM A WHERE num=0
+```<br/><br/>
+<b>7.where子句中对字段进行表达式操作的优化</b><br/><br/>
+不要在where子句中的“=”左边进行函数、算数运算或其他表达式运算，否则系统将可能无法正确使用索引。
+```
+SELECT id FROM A WHERE createdate>='2022-01-30' and createdate<'2022-05-01'
+```<br/><br/>
+<b>8.排序的索引问题</b><br/><br/>
+如果where子句中已经使用了索引的话，那么order by中的列是不会使用索引。因此数据库默认排序可以符合要求情况下不要使用排序操作；尽量不要包含多个列的排序，如果需要最好给这些列创建复合索引。<br/><br/>
+<b>9. 尽量用 union all 替换 union</b><br/><br/>
+union和union all的差异主要是前者需要将两个（或者多个）结果集合并后再进行唯一性过滤操作，这就会涉及到排序，增加大量的cpu运算，加大资源消耗及延迟。所以当我们可以确认不可能出现重复结果集或者不在乎重复结果集的时候，尽量使用union all而不是union.
+</p>
+ 
+
+
+    </body>
+</html>
